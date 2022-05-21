@@ -24,7 +24,7 @@
            :root {:fx/type :group
                   :children [{:fx/type circle :x x :y y}]}}})
 
-(defn do-one-step [step]
+(defn simulate-one-step [step]
   (case (first step)
     :move (let [[_ dir dist] step]
             (case dir
@@ -32,25 +32,31 @@
               :right (swap! *state update :x #(+ dist %))
               :up (swap! *state update :y #(- % dist))
               :down (swap! *state update :y #(+ dist %))))
-    :start (let [[_ delayed-action] step]
-             (deref delayed-action))
-    :no-op nil
-    nil))
+    :no-op @*state))
 
 (def *animators
   (atom {}))
 
+(defn update-one-step [action]
+  (let [[step & next] (get @*animators action)]
+    (if step
+      (case (first step)
+        :join (let [[_ delayed-action] step
+                    a (deref delayed-action)]
+                (swap! *animators assoc a (concat (get @*animators a) next))
+                (swap! *animators assoc action (list))
+                (recur a))
+        (do
+          (swap! *animators assoc action next)
+          (simulate-one-step step)))
+      (do
+        (swap! *animators dissoc action)
+        (.stop action)))))
+
 (defn start-animator [steps]
   (let [a (proxy [javafx.animation.AnimationTimer] []
             (handle [now]
-              (if-let [[x & next] (get @*animators this)] 
-                (do
-                  (do-one-step x)
-                  (swap! *animators assoc this next))
-                (do 
-                  (.stop this)
-                  (swap! *animators dissoc this))
-                )))]
+              (update-one-step this)))]
     (swap! *animators assoc a steps)
     (.start a)
     a))
@@ -60,6 +66,7 @@
     (repeat frames [:move dir (/ dist frames)])))
 
 (defn move [dir dist time]
+  (println "move" dir dist time)
   (start-animator (move-steps dir dist time)))
 
 (defn running? [action]
@@ -90,11 +97,23 @@
 (defn do-together [& actions]
   (reduce do-and-wait (do-nothing) (map atom actions)))
 
+(defn do-delays-in-order-steps [delayed-actions]
+    (map (fn [x] [:join x]) delayed-actions))
+
+(defn do-delays-in-order [delayed-actions]
+  (start-animator (do-delays-in-order-steps delayed-actions)))
+
+(defmacro add-delays [items] 
+  (cons 'list 
+        (loop [items items dels []] 
+          (if (empty? items) 
+            dels 
+            (recur (next items) (conj dels (list 'delay (first items))))))))
+
 (defmacro do-in-order
   ([] `(do-nothing))
-  ([x] x)
-  ([x & next]
-   `(do-and-wait ~x (delay (do-in-order ~@next)))))
+  ([& new-actions] 
+   `(do-delays-in-order (add-delays ~new-actions))))
 
 (def renderer
   (fx/create-renderer
