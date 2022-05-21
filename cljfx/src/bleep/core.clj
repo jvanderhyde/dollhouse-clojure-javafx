@@ -79,28 +79,27 @@
      (cons [:no-op] (wait-for-action-steps action))
      (list))))
 
-(defn wait-for-action [action]
-  (start-animator (wait-for-action-steps action)))
-
-(defn do-and-wait-steps [action delayed-action]
-  (if (running? action)
+(defn do-and-wait-steps [action1 action2]
+  (if (running? action1)
     (lazy-seq
-     (cons [:no-op] (do-and-wait-steps action delayed-action)))
-    (wait-for-action-steps (deref delayed-action))))
+     (cons [:no-op] (do-and-wait-steps action1 action2)))
+    (wait-for-action-steps action2)))
 
-(defn do-and-wait [action delayed-action]
-  (start-animator (do-and-wait-steps action delayed-action)))
+(defn do-and-wait [action1 action2]
+  (start-animator (do-and-wait-steps action1 action2)))
 
 (defn do-nothing []
   (start-animator (list)))
 
 (defn do-together [& actions]
-  (reduce do-and-wait (do-nothing) (map atom actions)))
+  (println (str "do-together (" (count actions) " actions)"))
+  (reduce do-and-wait (do-nothing) actions))
 
 (defn do-delays-in-order-steps [delayed-actions]
     (map (fn [x] [:join x]) delayed-actions))
 
 (defn do-delays-in-order [delayed-actions]
+  (println (str "do-in-order (" (count delayed-actions) " actions)"))
   (start-animator (do-delays-in-order-steps delayed-actions)))
 
 (defmacro add-delays [items] 
