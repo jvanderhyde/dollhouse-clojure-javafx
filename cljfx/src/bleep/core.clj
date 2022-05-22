@@ -133,6 +133,19 @@
    (move :left (+ n 3) 0.25)
    (squiral (+ n 4))))
 
+(defn move-with-bounces [vx vy]
+  (do-in-order
+   (do-together
+    (move :right vx 0)
+    (move :down vy 0))
+   (cond
+     (or (< (:x @*state) 20) (> (:x @*state) 780))
+     (move-with-bounces (- vx) vy)
+     (or (< (:y @*state) 20) (> (:y @*state) 580))
+     (move-with-bounces vx (- vy))
+     :else
+     (move-with-bounces vx vy))))
+
 (defn -main [& args]
   (Platform/setImplicitExit true) ;exit JavaFX when last window is closed
   (fx/mount-renderer *state renderer) ;show the window
