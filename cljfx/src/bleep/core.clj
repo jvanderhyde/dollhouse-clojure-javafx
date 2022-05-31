@@ -46,6 +46,11 @@
                 (swap! *animators assoc a (concat (get @*animators a) next))
                 (swap! *animators assoc action (list))
                 (recur a))
+        :eval (let [[_ f x] step
+                    a (f x)]
+                (swap! *animators assoc a (concat (get @*animators a) next))
+                (swap! *animators assoc action (list))
+                (recur a))
         (do
           (swap! *animators assoc action next)
           (simulate-one-step step)))
@@ -114,6 +119,16 @@
   ([& new-actions] 
    `(do-delays-in-order (add-delays ~new-actions))))
 
+(defn for-all-in-order-steps [action-fn coll]
+  (map (fn [x] [:eval action-fn x]) coll))
+
+(defn for-all-in-order-fn [action-fn coll]
+  (println (str "for-all-in-order (" (count coll) " items)"))
+  (start-animator (for-all-in-order-steps action-fn coll)))
+
+(defmacro for-all-in-order [bindings coll action]
+  `(for-all-in-order-fn (fn ~bindings ~action) ~coll))
+
 (def renderer
   (fx/create-renderer
    :middleware (fx/wrap-map-desc assoc :fx/type root)))
@@ -146,9 +161,7 @@
      :else
      (move-with-bounces vx vy))))
 
-(defn -main [& args]
-  (Platform/setImplicitExit true) ;exit JavaFX when last window is closed
-  (fx/mount-renderer *state renderer) ;show the window
+(defn test-do-in-order []
   (do-in-order
    (do-in-order
     (move :up 100 1)
@@ -157,7 +170,16 @@
    (move :left 200 2)
    (do-together
     (move :up 100 2)
-    (move :right 200 3))
-   (square)
-   (squiral 1)))
+    (move :right 200 3))))
+
+(defn test-for-all-in-order []
+  (for-all-in-order 
+   [d] [:up :right :down :right :up :right] 
+   (move d 100 0.5)))
+
+(defn -main [& args]
+  (Platform/setImplicitExit true) ;exit JavaFX when last window is closed
+  (fx/mount-renderer *state renderer) ;show the window
+
+  (test-for-all-in-order))
 
