@@ -129,6 +129,13 @@
 (defmacro for-all-in-order [bindings coll action]
   `(for-all-in-order-fn (fn ~bindings ~action) ~coll))
 
+(defn for-all-together-fn [action-fn coll]
+  (println (str "for-all-together (" (count coll) " items)"))
+  (reduce do-and-wait (do-nothing) (map action-fn coll)))
+
+(defmacro for-all-together [bindings coll action]
+  `(for-all-together-fn (fn ~bindings ~action) ~coll))
+
 (def renderer
   (fx/create-renderer
    :middleware (fx/wrap-map-desc assoc :fx/type root)))
@@ -177,9 +184,14 @@
    [d] [:up :right :down :right :up :right] 
    (move d 100 0.5)))
 
+(defn test-for-all-together []
+  (for-all-together
+   [d] [:down :down :down :right :up :up]
+   (move d 100 1)))
+
 (defn -main [& args]
   (Platform/setImplicitExit true) ;exit JavaFX when last window is closed
   (fx/mount-renderer *state renderer) ;show the window
 
-  (test-for-all-in-order))
+  (test-for-all-together))
 
