@@ -126,15 +126,15 @@
   (println (str "for-all-in-order (" (count coll) " items)"))
   (start-animator (for-all-in-order-steps action-fn coll)))
 
-(defmacro for-all-in-order [bindings coll action]
-  `(for-all-in-order-fn (fn ~bindings ~action) ~coll))
+(defmacro for-all-in-order [params coll action]
+  `(for-all-in-order-fn (fn ~params ~action) ~coll))
 
 (defn for-all-together-fn [action-fn coll]
   (println (str "for-all-together (" (count coll) " items)"))
   (reduce do-and-wait (do-nothing) (map action-fn coll)))
 
-(defmacro for-all-together [bindings coll action]
-  `(for-all-together-fn (fn ~bindings ~action) ~coll))
+(defmacro for-all-together [params coll action]
+  `(for-all-together-fn (fn ~params ~action) ~coll))
 
 (def renderer
   (fx/create-renderer
